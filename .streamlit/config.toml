@@ -1,0 +1,12 @@
+# Streamlit configuration for this app.
+
+[server]
+# Don't watch source files for changes. This removes the console flood of
+# "ModuleNotFoundError: No module named 'torchvision'" tracebacks — Streamlit's
+# watcher pokes every optional transformers vision module while cataloguing
+# files. Trade-off: after editing the code, restart the app (close the console
+# window and double-click run-chatbot.bat again) instead of auto-reload.
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false

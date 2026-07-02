@@ -1,0 +1,736 @@
+﻿<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Your PDF Chatbot Works</title>
+<style>
+  :root{
+    --paper:#FBFAF7; --ink:#20242C; --ink-soft:#5C6472; --line:#E5E2D9;
+    --mark:#FFE45C; --green:#2E5E4E; --green-tint:#EAF1EC;
+    --codebg:#22261E; --codetx:#E8E6DC; --codecm:#9AA38B; --codeys:#FFD84D; --codegr:#8FBFA8;
+    --serif:Cambria, Georgia, 'Times New Roman', serif;
+    --sans:'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono:Consolas, 'Cascadia Mono', Menlo, monospace;
+  }
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{transition:none !important} }
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.65; margin:0}
+  .wrap{max-width:46rem; margin:0 auto; padding:2.5rem 1.25rem 5rem}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2}
+  h1{font-size:2.4rem; margin:.4rem 0 .6rem}
+  h2{font-size:1.7rem; margin:0 0 .9rem}
+  h3{font-size:1.18rem; margin:1.8rem 0 .5rem}
+  h4{font-size:1rem; margin:1.2rem 0 .3rem}
+  p{margin:.75rem 0}
+  a{color:var(--green)}
+  a:focus-visible, summary:focus-visible, input:focus-visible{outline:3px solid var(--mark); outline-offset:2px}
+  mark{background:linear-gradient(transparent 52%, var(--mark) 52%); padding:0 .15em; font-weight:600}
+  .eyebrow{font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--green); font-weight:600}
+  .lede{font-size:1.12rem; color:var(--ink-soft); max-width:60ch}
+  header.top{border-bottom:1px solid var(--line); padding-bottom:1.6rem; margin-bottom:1.6rem}
+  .toc{display:flex; flex-wrap:wrap; gap:.5rem; margin:1.4rem 0 0}
+  .toc a{font-size:.85rem; text-decoration:none; border:1px solid var(--line); border-radius:999px;
+    padding:.28rem .8rem; color:var(--ink); background:#fff}
+  .toc a:hover{border-color:var(--green); background:var(--green-tint)}
+  section{margin:3.2rem 0}
+  .secnum{display:inline-flex; align-items:center; justify-content:center; width:2rem; height:2rem;
+    border-radius:50%; background:var(--mark); color:var(--ink); font-family:var(--serif);
+    font-weight:700; font-size:1.05rem; margin-right:.55rem; vertical-align:-.35rem}
+  .filechip{font-family:var(--mono); font-size:.82em; background:var(--green-tint); color:var(--green);
+    border:1px solid #CBDCD2; border-radius:6px; padding:.08em .45em; white-space:nowrap}
+  .v3{display:inline-block; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+    background:var(--green); color:#fff; border-radius:4px; padding:.12em .5em; vertical-align:.15em; margin-left:.4rem}
+  .note{border:1px solid var(--line); border-left:4px solid var(--mark); background:#fff;
+    border-radius:8px; padding:.9rem 1.1rem; margin:1.2rem 0}
+  .note.green{border-left-color:var(--green)}
+  .note p{margin:.35rem 0}
+  .ex{border:1px dashed var(--green); background:var(--green-tint); border-radius:8px;
+    padding:.7rem 1rem; margin:.9rem 0; font-size:.93rem}
+  .ex .exlbl{font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:var(--green); font-weight:700}
+  .ex p{margin:.3rem 0}
+  pre{background:var(--codebg); color:var(--codetx); font-family:var(--mono); font-size:.83rem;
+    line-height:1.6; border-radius:10px; padding:1rem 1.2rem; overflow-x:auto; margin:1rem 0}
+  code{font-family:var(--mono)}
+  p code, li code, td code, .ex code{background:#F0EDE3; border-radius:4px; padding:.06em .35em; font-size:.86em}
+  .ex code{background:#fff}
+  pre .c{color:var(--codecm); font-style:italic}
+  pre .k{color:var(--codeys)}
+  pre .s{color:var(--codegr)}
+  table{border-collapse:collapse; width:100%; font-size:.92rem; margin:1rem 0}
+  .tablewrap{overflow-x:auto}
+  th{font-family:var(--serif); text-align:left; border-bottom:2px solid var(--ink); padding:.5rem .6rem}
+  td{border-bottom:1px solid var(--line); padding:.55rem .6rem; vertical-align:top}
+  tr.win td{background:var(--green-tint)}
+  .pipe{display:flex; flex-wrap:wrap; gap:.45rem; align-items:center; margin:1.2rem 0; font-size:.85rem}
+  .pipe .st{background:#fff; border:1.5px solid var(--ink); border-radius:8px; padding:.35rem .6rem;
+    font-weight:600; box-shadow:2px 2px 0 var(--mark)}
+  .pipe .st.up{box-shadow:2px 2px 0 var(--green)}
+  .pipe .ar{color:var(--ink-soft); font-weight:700}
+  dl.gloss{display:grid; grid-template-columns:1fr; gap:.9rem; margin:1.2rem 0}
+  dl.gloss > div{background:#fff; border:1px solid var(--line); border-radius:10px; padding:.85rem 1.05rem}
+  dl.gloss dt{font-family:var(--serif); font-weight:700; font-size:1.02rem}
+  dl.gloss dd{margin:.25rem 0 0; color:var(--ink-soft)}
+  .journey{list-style:none; margin:1.2rem 0; padding:0; counter-reset:step}
+  .journey li{counter-increment:step; position:relative; padding:0 0 1.05rem 3rem}
+  .journey li::before{content:counter(step); position:absolute; left:0; top:0; width:1.9rem; height:1.9rem;
+    border-radius:50%; background:var(--ink); color:#fff; font-family:var(--serif); font-weight:700;
+    display:flex; align-items:center; justify-content:center; font-size:.95rem}
+  .journey li::after{content:""; position:absolute; left:.9rem; top:2.1rem; bottom:.2rem; width:2px; background:var(--line)}
+  .journey li:last-child::after{display:none}
+  .journey b{font-family:var(--serif)}
+  .space{position:relative; height:12rem; background:#fff; border:1.5px solid var(--ink); border-radius:10px;
+    margin:1.2rem 0; overflow:hidden}
+  .space .axis{position:absolute; left:.7rem; bottom:.45rem; font-size:.72rem; color:var(--ink-soft); font-family:var(--mono)}
+  .space .pt{position:absolute; transform:translate(-50%,-50%); font-size:.78rem; white-space:nowrap;
+    padding-left:1rem; color:var(--ink-soft)}
+  .space .pt::before{content:""; position:absolute; left:0; top:50%; transform:translateY(-50%);
+    width:.65rem; height:.65rem; border-radius:50%; background:var(--ink)}
+  .space .pt.hot{color:var(--ink); font-weight:600}
+  .space .pt.hot::before{background:var(--mark); border:1.5px solid var(--ink)}
+  .space .halo{position:absolute; border:2px dashed var(--green); border-radius:50%; width:11rem; height:6.5rem;
+    transform:translate(-50%,-50%)}
+  .nest{background:#fff; border:1.5px solid var(--ink); border-radius:10px; padding:.8rem 1rem; margin:1rem 0}
+  .nest .plbl{font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); font-weight:700}
+  .nest .kids{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.5rem}
+  .nest .kid{background:var(--green-tint); border:1.5px solid var(--green); border-radius:7px;
+    padding:.35rem .6rem; font-size:.8rem}
+  .nest .kid.hit{background:var(--mark); border-color:var(--ink); font-weight:600}
+  .demo{background:#fff; border:1.5px solid var(--ink); border-radius:12px; padding:1.2rem 1.3rem; margin:1.4rem 0;
+    box-shadow:4px 4px 0 var(--mark)}
+  .demo label{font-weight:600; font-size:.92rem}
+  .demo input{width:100%; box-sizing:border-box; font:inherit; padding:.55rem .7rem; margin:.5rem 0 1rem;
+    border:1.5px solid var(--ink); border-radius:8px; background:var(--paper)}
+  .dchunk{margin:.7rem 0}
+  .dchunk .head{display:flex; justify-content:space-between; font-size:.8rem; font-family:var(--mono); color:var(--ink-soft)}
+  .dchunk .track{background:#F0EDE3; border-radius:5px; height:1.05rem; overflow:hidden; margin:.25rem 0}
+  .dchunk .fill{background:var(--green); height:100%; width:0%; border-radius:5px; transition:width .35s ease}
+  .dchunk.best .fill{background:var(--mark)}
+  .dchunk.best .head b{color:var(--ink)}
+  .dchunk .txt{font-size:.83rem; color:var(--ink-soft)}
+  .demo .verdict{font-size:.9rem; margin-top:.9rem; padding-top:.8rem; border-top:1px dashed var(--line)}
+  details{background:#fff; border:1px solid var(--line); border-radius:10px; padding:.75rem 1rem; margin:.7rem 0}
+  summary{font-weight:600; cursor:pointer; font-family:var(--serif); font-size:1.02rem}
+  details[open]{border-color:var(--green)}
+  details p{color:var(--ink-soft)}
+  ul.tight li{margin:.4rem 0}
+  footer{border-top:1px solid var(--line); margin-top:4rem; padding-top:1.4rem; color:var(--ink-soft); font-size:.9rem}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Project 1 · Study guide · Version 3 — complete edition</div>
+  <h1>How Your PDF Chatbot Works</h1>
+  <p class="lede">Every concept in the project, explained from zero with a simple example —
+  from "what is an LLM" all the way to hybrid retrieval, reranking, and the agentic loop.
+  Keep the app and the code open next to this page.</p>
+  <nav class="toc" aria-label="Contents">
+    <a href="#big">1 Big picture</a>
+    <a href="#words">2 Ten words first</a>
+    <a href="#rag">3 What RAG means</a>
+    <a href="#read">4 Reading the PDF</a>
+    <a href="#chunk">5 Chunking</a>
+    <a href="#index">6 Indexing</a>
+    <a href="#retrieve">7 Retrieval &amp; reranking</a>
+    <a href="#demo">8 Live demo</a>
+    <a href="#agentic">9 The agentic loop</a>
+    <a href="#answer">10 Answering &amp; self-check</a>
+    <a href="#code">11 Code tour</a>
+    <a href="#flow">12 Full workflow</a>
+    <a href="#eval">13 Measuring quality</a>
+    <a href="#limits">14 Limits</a>
+    <a href="#experiments">15 Experiments</a>
+    <a href="#quiz">16 Check yourself</a>
+  </nav>
+</header>
+
+<section id="big">
+  <h2><span class="secnum">1</span>The big picture</h2>
+  <p>An AI model like Llama learned from huge amounts of public internet text.
+  But it has <strong>never seen your PDF</strong>. Your file is private — it is not inside the model.</p>
+  <p>Ask it about your document anyway, and it has two bad options: admit it doesn't know, or — worse —
+  <mark>hallucinate</mark>: invent a confident-sounding answer that is simply made up.</p>
+  <div class="note">
+    <p><strong>The fix: don't ask the model to remember your PDF. Show it the right paragraphs at question time.</strong></p>
+    <p>Think of an open-book exam. The student (the AI) is smart but never read your book.
+    A librarian (your code) finds the right pages and slides them across the desk. The student answers
+    <em>using only those pages</em>. That system is called <mark>RAG</mark>.</p>
+  </div>
+  <p>Your project is that librarian + student system — and by version 3, the librarian got very good:
+  it reads scanned pages, understands synonyms, double-checks its own work, and even retries with
+  better search words when the first attempt looks weak.</p>
+  <div class="pipe">
+    <span class="st">Extract</span><span class="ar">→</span>
+    <span class="st">Chunk</span><span class="ar">→</span>
+    <span class="st">Index</span><span class="ar">→</span>
+    <span class="st up">Rewrite</span><span class="ar">→</span>
+    <span class="st up">Retrieve + Rerank</span><span class="ar">→</span>
+    <span class="st up">Grade / Retry</span><span class="ar">→</span>
+    <span class="st">Augment</span><span class="ar">→</span>
+    <span class="st">Generate</span><span class="ar">→</span>
+    <span class="st up">Self-check</span>
+  </div>
+  <p>Green-shadowed stages are the "smart" v3 additions. Sections 4–10 walk through every stage
+  with examples; sections 11–12 explain the code and the full workflow.</p>
+</section>
+
+<section id="words">
+  <h2><span class="secnum">2</span>Ten words you need first</h2>
+  <dl class="gloss">
+    <div><dt>LLM (Large Language Model)</dt>
+    <dd>A program trained on massive text to predict the next word, again and again. That simple skill,
+    at huge scale, lets it write answers and code. Yours is <b>Llama 3.3 70B</b> — 70 billion learned
+    numbers (parameters) inside it, running on Groq's servers.</dd></div>
+    <div><dt>Prompt</dt>
+    <dd>Everything you send the model in one request: rules + evidence + question. The model knows
+    only what's in the prompt (plus its old training). Nothing else.</dd></div>
+    <div><dt>System prompt</dt>
+    <dd>The first, special instruction that sets behavior — a job description. Yours says: "answer only
+    from the excerpts, quote the evidence, cite pages, never guess."</dd></div>
+    <div><dt>Token</dt>
+    <dd>The unit models read and write — roughly ¾ of a word. <i>Example:</i> "unbelievable" might be
+    3 tokens: <code>un</code>·<code>believ</code>·<code>able</code>. APIs count, limit, and charge by tokens.</dd></div>
+    <div><dt>Context window</dt>
+    <dd>The maximum tokens a model can look at in one request — its whiteboard. Big, but finite.
+    This limit is <em>why</em> we can't just paste whole documents in.</dd></div>
+    <div><dt>Hallucination &amp; grounding</dt>
+    <dd>Hallucination = the model invents facts fluently. Grounding = forcing every claim to come from
+    given source text. This whole project is a grounding machine.</dd></div>
+    <div><dt>Vector</dt>
+    <dd>A list of numbers describing something, so a computer can compare by math. <i>Example:</i> a
+    fruit as [sweetness, size]: apple=[6,5], cherry=[7,2]. Texts get the same treatment — just with
+    hundreds of numbers.</dd></div>
+    <div><dt>Temperature</dt>
+    <dd>The randomness dial for picking the next token. 0 = same careful answer every time; 1 = creative
+    variety. Factual document Q&amp;A wants low (yours: 0.2).</dd></div>
+    <div><dt>Streaming</dt>
+    <dd>Receiving the answer token-by-token as it's generated, instead of waiting for the whole thing.
+    That's why answers "type themselves" in your app.</dd></div>
+    <div><dt>API &amp; API key</dt>
+    <dd>An API is how your code talks to a program on someone else's computer (Llama on Groq's servers).
+    The key is your password — stored in an environment variable (<code>GROQ_API_KEY</code>), never in code.</dd></div>
+  </dl>
+</section>
+
+<section id="rag">
+  <h2><span class="secnum">3</span>What "RAG" actually means</h2>
+  <p>RAG = <strong>R</strong>etrieval-<strong>A</strong>ugmented <strong>G</strong>eneration:</p>
+  <div class="tablewrap"><table>
+    <tr><th>Word</th><th>Meaning</th><th>In your project</th></tr>
+    <tr><td><b>Retrieval</b></td><td>Find the few text pieces relevant to the question</td><td>Hybrid search + reranking over chunks</td></tr>
+    <tr><td><b>Augmented</b></td><td>Add those pieces into the prompt</td><td>Parent sections pasted above the question</td></tr>
+    <tr><td><b>Generation</b></td><td>The LLM writes the answer</td><td>Llama 3.3 on Groq, streaming, with quotes</td></tr>
+  </table></div>
+  <h3>Why not paste the whole PDF into the prompt?</h3>
+  <ul class="tight">
+    <li><strong>The context window is finite</strong> — a 300-page manual may not fit.</li>
+    <li><strong>Irrelevant text hurts</strong> — models answer better from a small, relevant haystack.</li>
+    <li><strong>Cost and speed</strong> — every token costs time (and on paid APIs, money).</li>
+  </ul>
+  <div class="ex"><span class="exlbl">Simple example</span>
+  <p>Question: "How long is the warranty?" — the model needs ~3 sentences from page 7,
+  not all 8 pages. Retrieval's whole job is finding those 3 sentences.</p></div>
+</section>
+
+<section id="read">
+  <h2><span class="secnum">4</span>Reading the PDF <span class="filechip">rag_pipeline.py · extract_pages()</span></h2>
+  <p>A PDF is not a text file — it's a <em>drawing format</em>: "place these letters at these positions."
+  Your extractor gets text out three ways, in order:</p>
+
+  <h3>4.1 — Normal text (pypdf)</h3>
+  <p><code>pypdf</code> walks each page and collects the placed letters back into plain text,
+  one <code>(page_number, text)</code> pair per page. Page numbers power citations later.</p>
+
+  <h3>4.2 — Tables (pdfplumber) <span class="v3">v3</span></h3>
+  <p>To a plain text extractor, a table is just words floating near each other — the rows get scrambled.
+  <code>pdfplumber</code> sees the grid <em>lines</em> and rebuilds proper rows, which we append to the
+  page text as <code>cell | cell | cell</code> lines.</p>
+  <div class="ex"><span class="exlbl">Simple example</span>
+  <p>Scrambled: <code>Weight Noise 2.8 kg 72 dB</code> — which number belongs to which?</p>
+  <p>Rebuilt: <code>Weight | 2.8 kg</code> and <code>Noise | 72 dB</code> — unambiguous.</p></div>
+
+  <h3>4.3 — OCR fallback for scanned pages (RapidOCR) <span class="v3">v3</span></h3>
+  <p>A scanned PDF is photographs of paper — there are no letters to extract. When a page yields almost
+  no text, your pipeline: (1) draws the page into an image with <code>pypdfium2</code>, then (2) runs
+  <mark>OCR</mark> (optical character recognition) — a small local neural network that reads letters
+  from pixels, like your eyes do.</p>
+  <div class="ex"><span class="exlbl">Real example from our tests</span>
+  <p>We generated a PDF containing only a picture of text. The OCR fallback read it back as:
+  <code>"scanned page test the replacement hose costs twenty dollars..."</code> — a page that v2
+  would have rejected entirely.</p></div>
+</section>
+
+<section id="chunk">
+  <h2><span class="secnum">5</span>Chunking: small-to-big <span class="filechip">rag_pipeline.py · chunk_pages()</span><span class="v3">upgraded</span></h2>
+  <p>Whole pages are too big to search well. But here's the dilemma you can feel with the chunk-size
+  slider: <strong>small chunks match sharply but carry too little context; big chunks carry context but
+  match mushily.</strong> Version 3 solves it by using BOTH sizes at once:</p>
+  <div class="nest">
+    <span class="plbl">Parent section (~360 words) — what the model READS</span>
+    <div style="font-size:.85rem; color:var(--ink-soft); margin:.3rem 0">
+      "The ACME X100 comes with a twelve (12) month limited warranty starting from the date of
+      purchase. The warranty covers manufacturing defects... register within 30 days... to extend
+      the warranty to twenty-four (24) months..."
+    </div>
+    <div class="kids">
+      <span class="kid">child 1: "...twelve month limited warranty..."</span>
+      <span class="kid hit">child 2: "...covers manufacturing defects..." ← matched!</span>
+      <span class="kid">child 3: "...register within 30 days..."</span>
+    </div>
+  </div>
+  <ul class="tight">
+    <li><strong>Children</strong> (~120 words, the slider) are what we <em>search</em> — small enough
+    that "this chunk matches the question" really means something.</li>
+    <li><strong>Parents</strong> (~3× bigger) are what the model <em>reads</em> — when child 2 matches,
+    the model receives the whole parent, so it also sees the registration detail next door.</li>
+    <li>Chunks pack <strong>whole sentences</strong> (never cut mid-sentence) and neighbors
+    <strong>overlap</strong> by ~30 words, so ideas sitting on a cut line stay findable.</li>
+    <li>Chunks never cross pages, so every chunk keeps one page number and source filename for
+    citations like <code>(manual.pdf, page 7)</code>.</li>
+  </ul>
+
+  <h3>Contextual headers <span class="v3">v3</span></h3>
+  <p>A child like <em>"It lasts twelve months."</em> is clear to a human reading the page — but as a
+  lonely chunk, it never mentions <em>warranty</em>, so warranty questions can miss it. The fix:
+  every child is indexed with a <mark>contextual header</mark> stapled on top — like writing on the
+  back of a photo where it was taken:</p>
+  <pre>[manual.pdf, page 7] The ACME X100 comes with a twelve (12) month limited...
+It lasts twelve months from the date of purchase.</pre>
+  <p>The header (source + page + the parent's opening words) travels with the child into the index —
+  so even orphan-sounding children carry their topic. This is a free, local version of a 2024 technique
+  called <em>contextual retrieval</em>; the full version has an LLM write each header.</p>
+</section>
+
+<section id="index">
+  <h2><span class="secnum">6</span>Indexing: turning text into numbers <span class="filechip">TfidfIndex / EmbeddingIndex</span></h2>
+  <p>Computers can't compare "meaning" directly — but they can compare <strong>vectors</strong>
+  (lists of numbers). Your app builds two different kinds:</p>
+
+  <h3>6.1 — TF-IDF: word-counting vectors</h3>
+  <p>One number per known word. Two rules set each number:</p>
+  <ul class="tight">
+    <li><strong>TF (term frequency):</strong> a word used often in <em>this</em> chunk scores high here.</li>
+    <li><strong>IDF (inverse document frequency):</strong> a word appearing in <em>every</em> chunk
+    ("the", "and") is useless for telling chunks apart → scored near zero. A rare word ("warranty")
+    → scored high.</li>
+  </ul>
+  <div class="ex"><span class="exlbl">Worked mini example</span>
+  <p>Three chunks: A = "the warranty lasts twelve months" · B = "rinse the filter under water" ·
+  C = "the battery charges in four hours".</p>
+  <p>The word <code>the</code> appears in all three → IDF ≈ 0 → ignored.
+  The word <code>warranty</code> appears only in A → high IDF. So for the question
+  "warranty length", chunk A scores clearly highest. Fast, transparent — but
+  <code>wash</code> and <code>rinse</code> are different slots, so synonyms score <b>zero</b>.</p></div>
+
+  <h3>6.2 — Embeddings: meaning vectors</h3>
+  <p>An <mark>embedding model</mark> (<code>all-MiniLM-L6-v2</code>, ~90 MB, runs on your machine) is a
+  neural network trained on billions of sentence pairs. It converts any text into a point in a
+  384-dimension "meaning space" where <strong>similar meanings land close together — even with zero
+  shared words</strong>:</p>
+  <div class="space" role="img" aria-label="Diagram: 'rinse the filter' and 'how do I wash it' sit close together in meaning space; 'battery runtime' and 'warranty period' sit far away.">
+    <span class="halo" style="left:31%; top:42%"></span>
+    <span class="pt hot" style="left:24%; top:34%">rinse the filter under water</span>
+    <span class="pt hot" style="left:30%; top:52%">how do I wash it?</span>
+    <span class="pt" style="left:72%; top:26%">battery runtime 45 minutes</span>
+    <span class="pt" style="left:66%; top:74%">twelve month warranty</span>
+    <span class="axis">meaning space (384 dimensions, drawn as 2)</span>
+  </div>
+
+  <h3>6.3 — Cosine similarity: comparing two vectors</h3>
+  <p>Both index types score a match the same way: <mark>cosine similarity</mark> — do two vectors point
+  in the same <em>direction</em>? 1.0 = identical profile, 0 = nothing shared.</p>
+  <div class="ex"><span class="exlbl">Simple example</span>
+  <p>With 2 numbers [sweetness, size]: apple=[6,5] and pear=[5,6] point almost the same way →
+  similarity ≈ 0.98. Apple vs lemon=[1,3] point differently → low. Your app does this with
+  384 numbers instead of 2 — same idea.</p></div>
+
+  <h3>6.4 — ChromaDB: the vector database</h3>
+  <p>Embedding every chunk of a big document takes real time. A <mark>vector database</mark> stores the
+  vectors on disk and finds nearest neighbors fast. Yours is <strong>ChromaDB</strong>, living in the
+  <code>.chroma</code> folder — each unique (files + settings) combination gets a collection named by a
+  fingerprint (hash) of the file bytes.</p>
+  <div class="ex"><span class="exlbl">Real example from our tests</span>
+  <p>First index build: 0.25s of embedding work. Re-opening the same PDF: 0.00s — the fingerprint
+  matched, so the stored vectors were reused. Industrial tools (Pinecone, FAISS, Weaviate) do this
+  job for millions of vectors.</p></div>
+</section>
+
+<section id="retrieve">
+  <h2><span class="secnum">7</span>Retrieval: hybrid fusion + reranking <span class="v3">v3</span></h2>
+
+  <h3>7.1 — Hybrid retrieval with RRF <span class="filechip">HybridIndex · rrf_fuse()</span></h3>
+  <p>Words and meanings fail differently: word-matching nails exact terms ("X100", "0.6 liters") but is
+  synonym-blind; embeddings catch synonyms but can fumble rare exact codes. So the default mode runs
+  <strong>both</strong> and merges their rankings with <mark>Reciprocal Rank Fusion</mark>: each list
+  votes, and an item at rank r earns <code>1/(60+r)</code> points.</p>
+  <div class="ex"><span class="exlbl">Worked mini example</span>
+  <p>Word-ranking says: 1) Warranty 2) Battery 3) Specs. Meaning-ranking says: 1) Specs 2) Warranty 3) Filter.</p>
+  <p>Warranty: 1/61 + 1/62 = <b>0.0325</b> ← ranked well by BOTH lists → wins<br>
+  Specs: 1/63 + 1/61 = 0.0323 · Battery: 1/62 = 0.0161 · Filter: 1/63 = 0.0159</p>
+  <p>Note RRF only uses <em>positions</em>, never raw scores — so it can fuse TF-IDF scores and cosine
+  scores even though they live on completely different scales.</p></div>
+
+  <h3>7.2 — The cross-encoder reranker <span class="filechip">Reranker</span></h3>
+  <p>Everything so far is a <em>bi-encoder</em>: the question and the chunk are converted to vectors
+  <strong>separately</strong>, then compared. A <mark>cross-encoder</mark> reads question + chunk
+  <strong>together</strong>, in one pass, and outputs a single relevance score — far more precise,
+  but too slow to run on every chunk.</p>
+  <div class="ex"><span class="exlbl">Analogy</span>
+  <p>Bi-encoder = reading two people's diaries in separate rooms, then guessing if they'd get along.
+  Cross-encoder = watching them have an actual conversation. Slower, much more accurate.</p></div>
+  <p>So the modern pattern your app uses: <strong>retrieve ~16 candidates cheaply → rerank them with the
+  cross-encoder → keep the best k</strong>. The reranker is another small local model
+  (<code>ms-marco-MiniLM</code>, ~80 MB).</p>
+  <div class="ex"><span class="exlbl">Real example from our tests</span>
+  <p>For "How long is the warranty?" the reranker gave the warranty chunk confidence <b>0.98</b>; for
+  a totally unrelated question, its best score was <b>0.00</b>. And in the full measurement, reranking
+  pushed the correct page to <b>rank #1 on all 8 test questions</b>.</p></div>
+</section>
+
+<section id="demo">
+  <h2><span class="secnum">8</span>Try retrieval yourself — live</h2>
+  <p>This demo runs a toy version of <strong>TF-IDF</strong> right here in your browser. Three chunks
+  from a fake manual are indexed. Type a question and watch which chunk wins — pure word math, no AI.</p>
+  <div class="demo">
+    <label for="q">Your question</label>
+    <input id="q" type="text" value="How long is the warranty?" autocomplete="off">
+    <div class="dchunk" id="d0">
+      <div class="head"><b>page 1 — warranty</b><span class="score">0%</span></div>
+      <div class="track"><div class="fill"></div></div>
+      <div class="txt">The X100 comes with a twelve month limited warranty covering manufacturing defects.</div>
+    </div>
+    <div class="dchunk" id="d1">
+      <div class="head"><b>page 2 — cleaning</b><span class="score">0%</span></div>
+      <div class="track"><div class="fill"></div></div>
+      <div class="txt">To clean the filter, remove the dust container and rinse the filter under cold water.</div>
+    </div>
+    <div class="dchunk" id="d2">
+      <div class="head"><b>page 3 — battery</b><span class="score">0%</span></div>
+      <div class="track"><div class="fill"></div></div>
+      <div class="txt">The battery provides 45 minutes of runtime and recharges fully in about four hours.</div>
+    </div>
+    <p class="verdict" id="verdict"></p>
+  </div>
+  <p>Try <em>"how do I wash it"</em> — "wash" scores <strong>zero</strong> because the chunk says
+  "rinse". That's the exact failure your app's embeddings, hybrid mode, HyDE, and agentic retry all
+  exist to fix — flip the sidebar and compare.</p>
+</section>
+
+<section id="agentic">
+  <h2><span class="secnum">9</span>The agentic loop: a pipeline that makes decisions <span class="filechip">advanced_rag.py · smart_retrieve()</span><span class="v3">v3</span></h2>
+  <p>Classic RAG is a fixed conveyor belt: retrieve → answer, no matter how bad the evidence is.
+  Version 3 gives the pipeline <strong>judgment</strong>. Four small "thinking" calls power it
+  (all in <span class="filechip">chatbot.py</span>):</p>
+
+  <h3>9.1 — Query rewriting (follow-ups)</h3>
+  <p>A follow-up like <em>"and what does it cover?"</em> retrieves terribly — those five words say
+  nothing about warranties. Before searching, one quick model call rewrites it into a standalone question.</p>
+  <div class="ex"><span class="exlbl">Real example from our tests</span>
+  <p>You typed: <code>and what does it cover?</code><br>
+  Searched instead: <code>What does the twelve-month warranty, as mentioned on page 7, cover?</code><br>
+  (The model still receives your original words — the rewrite is only for searching.)</p></div>
+
+  <h3>9.2 — Grading the evidence (CRAG)</h3>
+  <p>After retrieving, the pipeline asks the model one tiny question: <em>"Can the question be fully
+  answered using ONLY these excerpts? YES or NO."</em> If NO, it doesn't give up — it retries.</p>
+
+  <h3>9.3 — Multi-query expansion (the retry)</h3>
+  <p>The retry generates 2 rephrasings of the question <em>using different words</em>, searches with all
+  of them, and fuses everything with RRF. Different words → different chunks get a chance.</p>
+  <div class="ex"><span class="exlbl">Real trace from our tests (off-topic question)</span>
+  <pre>Q: "What is the airspeed velocity of an unladen swallow?"
+- Reranked 7 candidates (best score 0.00)
+- Grade: NOT sufficient - trying synonym queries (CRAG retry)
+- Query variants: "What is the wind speed of a swallow in flight..." /
+                  "At what rate does a burden-free swallow travel..."
+- Attempt 2: fused pool now 8 candidates (still ~0.00)
+- Final evidence: weak -> the answer honestly says the document doesn't cover it</pre>
+  <p>The loop <em>tried harder, then told the truth</em> — that's agentic RAG in one trace.</p></div>
+
+  <h3>9.4 — HyDE: searching with a fake answer</h3>
+  <p><mark>HyDE</mark> (Hypothetical Document Embeddings) is a clever trick: questions and answers are
+  <em>shaped</em> differently, and your chunks are answer-shaped. So the model writes a short
+  <em>fake ideal answer</em> (never shown to you), and the search uses THAT as the probe — an
+  answer-shaped probe lands closer to answer-shaped chunks in meaning space.</p>
+  <div class="ex"><span class="exlbl">Simple example</span>
+  <p>Question probe: "How do I wash it?" · HyDE probe: <em>"To clean the appliance, rinse the filter
+  under cold water and let it dry..."</em> — the fake answer naturally uses manual-style words like
+  <code>rinse</code>, which match the real page directly. In our test, HyDE found the rinse page for
+  the wash question. It's a sidebar toggle (off by default).</p></div>
+
+  <p>Every decision — rewrite, rerank scores, grade verdict, retry, final evidence — is written into the
+  <strong>Agentic trace</strong> you see in the expander. Nothing is hidden.</p>
+</section>
+
+<section id="answer">
+  <h2><span class="secnum">10</span>Answering, evidence quotes, and the self-check <span class="filechip">chatbot.py</span></h2>
+
+  <h3>10.1 — Augment: building the prompt</h3>
+  <pre><span class="c"># Layer 1 - the system prompt (the rules, every request):</span>
+<span class="s">"Answer using ONLY those excerpts... say the document doesn't cover it...
+ cite (manual.pdf, page 3)... include the exact supporting sentence as a quote..."</span>
+
+<span class="c"># Layer 2 - the user message (fresh each question):</span>
+<span class="s">"""Document excerpts:
+[Excerpt from manual.pdf, page 7]
+...the PARENT section text...
+
+Question: How long is the warranty?"""</span></pre>
+  <p>This is <mark>grounding</mark>: the question travels wrapped in evidence. Note the excerpts are the
+  <strong>parents</strong> (big sections), found via the children (small chunks) — small-to-big in action.</p>
+
+  <h3>10.2 — Generate: Groq, streaming, fallback, memory</h3>
+  <ul class="tight">
+    <li><strong>Groq</strong> runs the open Llama 3.3 70B model on fast chips with a free daily quota.</li>
+    <li><strong>Streaming</strong> (<code>stream=True</code>) yields tokens as they're made — Python's
+    <code>yield</code> hands each piece to the UI instantly.</li>
+    <li><strong>Model fallback:</strong> if Groq ever retires the model name, the code automatically
+    tries the next one in its <code>MODELS</code> list (we tested this with a fake dead model).</li>
+    <li><strong>The API is stateless</strong> — the model remembers nothing between requests. The code
+    re-sends recent history each time, trimmed to the last 6 question/answer pairs so long chats stay
+    inside free-tier token limits.</li>
+    <li><strong>Evidence quotes:</strong> the rules ask for the exact supporting sentence as a quote —
+    so answers show their proof inline: <em>"A full charge takes approximately four hours." (page 3)</em></li>
+  </ul>
+
+  <h3>10.3 — The groundedness self-check <span class="v3">v3</span></h3>
+  <p>After the answer streams, one more call plays teacher: <em>"check every claim in this answer
+  against these excerpts — reply ALL SUPPORTED or list the unsupported claims."</em> The result shows
+  under the answer as ✅ or ⚠️.</p>
+  <div class="ex"><span class="exlbl">Real example from our tests</span>
+  <p>We fed the checker a fake answer: <em>"The warranty lasts fifty years and includes free helicopter
+  delivery (page 7)."</em> It flagged both lies:
+  <code>* The warranty lasts fifty years · * includes free helicopter delivery</code>.
+  This is <mark>hallucination detection</mark> — a second AI pass guarding the first.</p></div>
+</section>
+
+<section id="code">
+  <h2><span class="secnum">11</span>Code tour — who does what</h2>
+  <div class="tablewrap"><table>
+    <tr><th>File</th><th>Role</th><th>In one sentence</th></tr>
+    <tr><td><span class="filechip">rag_pipeline.py</span></td><td>The librarian</td><td>Reads PDFs (text/tables/OCR), makes parent+child chunks, and owns all three indexes plus the reranker — pure local work, no chat API.</td></tr>
+    <tr><td><span class="filechip">advanced_rag.py</span></td><td>The planner</td><td>One function, <code>smart_retrieve()</code>: rewrite → (HyDE) → retrieve → rerank → grade → maybe retry → hand back parents + a readable trace.</td></tr>
+    <tr><td><span class="filechip">chatbot.py</span></td><td>The student</td><td>Talks to Groq: the streaming answer call, plus five small "thinking" helpers (rewrite, expand, HyDE, grade, groundedness) and the model-fallback logic.</td></tr>
+    <tr><td><span class="filechip">app.py</span></td><td>The desk</td><td>Streamlit UI: upload, sidebar settings, the chat, the trace expander, sources line, self-check badge, and friendly error messages.</td></tr>
+    <tr><td><span class="filechip">eval_retrieval.py</span></td><td>Examiner #1</td><td>Measures WHERE-finding: how often the right page lands in the top k, across all 4 retrieval configurations.</td></tr>
+    <tr><td><span class="filechip">eval_answers.py</span></td><td>Examiner #2</td><td>Measures HOW-WELL-answering: an LLM judge scores faithfulness and relevance, 1–5 (RAGAS-style).</td></tr>
+  </table></div>
+  <p>Supporting files: <span class="filechip">run-chatbot.bat</span> (double-click launcher) ·
+  <span class="filechip">sample-manual.pdf</span> + <span class="filechip">sample_questions.json</span>
+  (generated test data with built-in traps) · <span class="filechip">.chroma/</span> (the vector
+  database on disk) · <span class="filechip">requirements.txt</span> (the dependency list).</p>
+
+  <h3>Three ideas that make the app tick</h3>
+  <ul class="tight">
+    <li><strong>Streamlit reruns the whole script on every click.</strong> Anything worth keeping —
+    the index, the bot, the transcript — lives in <code>st.session_state</code>, a box that survives reruns.</li>
+    <li><strong>Heavy models load once.</strong> <code>@st.cache_resource</code> keeps the embedder and
+    reranker in memory across reruns instead of reloading them per question.</li>
+    <li><strong>A fingerprint detects change.</strong> The app hashes the uploaded file bytes + your
+    indexing settings; a new fingerprint → rebuild the index and start a fresh chat. The same
+    fingerprint names the ChromaDB collection — that's how re-uploads skip re-embedding.</li>
+  </ul>
+  <div class="note green">
+    <p><strong>Where is the AI, exactly?</strong> Three small neural networks run <em>locally</em> and
+    never write a word: the embedder (text→vectors), the reranker (scores pairs), and OCR (pixels→letters).
+    The only text-<em>writing</em> AI is Groq's Llama — called for: the rewrite, the grade, the expansion,
+    HyDE (if on), the answer, and the self-check. Everything else is ordinary deterministic Python.</p>
+  </div>
+</section>
+
+<section id="flow">
+  <h2><span class="secnum">12</span>The full workflow, step by step</h2>
+
+  <h3>Journey A — when you upload PDFs</h3>
+  <ol class="journey">
+    <li><b>Fingerprint.</b> The app hashes the file bytes + settings. Seen before? Skip to chat.</li>
+    <li><b>Extract.</b> Each page: pypdf text → pdfplumber tables appended → OCR if the page was
+    image-only.</li>
+    <li><b>Chunk.</b> Pages → parent sections → child chunks, each child stamped with its contextual
+    header, page, and source filename.</li>
+    <li><b>Index.</b> TF-IDF matrix built in memory; embeddings computed (or reused from
+    <code>.chroma</code> if the fingerprint matches) — hybrid mode keeps both.</li>
+    <li><b>Fresh start.</b> A new chatbot and empty transcript go into <code>session_state</code>.</li>
+  </ol>
+
+  <h3>Journey B — when you ask a question</h3>
+  <ol class="journey">
+    <li><b>Rewrite</b> — if it's a follow-up, one model call makes it standalone
+    (<em>"and what does it cover?" → "What does the twelve-month warranty cover?"</em>).</li>
+    <li><b>Probe</b> — the search text is the rewritten question (or a HyDE fake answer, if toggled on).</li>
+    <li><b>Retrieve</b> — the index returns ~16 candidate children; in hybrid mode, both rankings are
+    fused with RRF.</li>
+    <li><b>Rerank</b> — the cross-encoder re-scores question+chunk together and keeps the best.</li>
+    <li><b>Grade</b> — "is this enough to answer?" If NO: expand into synonym queries, retrieve again,
+    fuse, rerank (CRAG retry).</li>
+    <li><b>Small-to-big hand-off</b> — the winning children are swapped for their unique PARENT
+    sections, capped at k.</li>
+    <li><b>Show your work</b> — the Agentic trace + parent excerpts render in the expander,
+    so you see exactly what the model will see.</li>
+    <li><b>Augment + Generate</b> — rules + parents + your original question + the last 6 Q&amp;A pairs
+    go to Groq; the answer streams in with an evidence quote and citations.</li>
+    <li><b>Self-check</b> — every claim is verified against the excerpts; ✅ or ⚠️ appears, plus the
+    Sources line (file + pages).</li>
+    <li><b>Remember</b> — the turn is saved to the bot's history (for the model) and the transcript
+    (for your screen).</li>
+  </ol>
+  <p>Worst case that's ~4–5 model calls per question — which is why the sidebar lets you switch the
+  advanced steps off when you want speed or are near the free-tier rate limit.</p>
+</section>
+
+<section id="eval">
+  <h2><span class="secnum">13</span>Measuring quality — never guess <span class="filechip">eval_retrieval.py · eval_answers.py</span></h2>
+  <p>How do you <em>know</em> an upgrade helped? You measure. Your project has two examiners:</p>
+  <h3>13.1 — Retrieval hit rate</h3>
+  <p><code>eval_retrieval.py</code> asks questions where the right page is known, and reports how often
+  that page lands in the top k — for all four configurations. Real results on the sample manual:</p>
+  <div class="tablewrap"><table>
+    <tr><th>Configuration</th><th>Hit rate (top-4)</th><th>Correct page ranked #1</th></tr>
+    <tr><td>TF-IDF (words)</td><td>6/8</td><td>4/8</td></tr>
+    <tr><td>Embeddings (meaning)</td><td>8/8</td><td>8/8</td></tr>
+    <tr><td>Hybrid RRF</td><td>8/8</td><td>6/8</td></tr>
+    <tr class="win"><td><b>Hybrid + reranker</b></td><td><b>8/8</b></td><td><b>8/8</b></td></tr>
+  </table></div>
+  <p>Honest reading: on this small clean manual, embeddings alone already excel — hybrid + reranking
+  earn their keep on bigger, messier documents full of exact codes and part numbers. The point is:
+  now you can <em>check</em> instead of assume.</p>
+  <h3>13.2 — LLM-as-judge answer scoring</h3>
+  <p><code>eval_answers.py</code> runs the whole pipeline per question, then a <mark>judge</mark> model
+  grades each answer 1–5 on <strong>faithfulness</strong> (only from excerpts?) and
+  <strong>relevance</strong> (actually answers the question?). A second AI grading the first — the
+  same "LLM-as-judge" pattern used in industry (RAGAS).</p>
+  <div class="ex"><span class="exlbl">Real example from our tests</span>
+  <p>3 questions → faithfulness <b>5.0/5</b>, relevance <b>4.7/5</b>. The judge even wrote sensible
+  comments, e.g. for "How do I wash it?": <em>"mostly relevant but does not fully address washing the
+  entire vacuum"</em> — a fair 4/5.</p></div>
+</section>
+
+<section id="limits">
+  <h2><span class="secnum">14</span>Why it still fails sometimes</h2>
+  <ul class="tight">
+    <li><strong>OCR is basic.</strong> Clean scans work; handwriting and blurry photos don't.
+    First OCR use downloads its models (~15 MB).</li>
+    <li><strong>Tables are flattened</strong> to text rows — fine for lookups, weak for giant
+    merged-cell tables.</li>
+    <li><strong>Retrieval can still miss.</strong> If the needed fact hides in a low-ranked parent,
+    the model never sees it. Raise k, adjust chunk size — and measure.</li>
+    <li><strong>The self-check is not perfect.</strong> It catches unsupported claims well, but it can
+    only judge against what was retrieved — it can't know about pages that were never found.</li>
+    <li><strong>Free-tier rate limits.</strong> All toggles on ≈ 4–5 calls per question; turn some off
+    if Groq asks you to slow down.</li>
+    <li><strong>"Summarize everything" questions</strong> don't fit top-k retrieval — that's what
+    GraphRAG (a project-4 idea) is for.</li>
+  </ul>
+</section>
+
+<section id="experiments">
+  <h2><span class="secnum">15</span>Experiments — the fastest way to really learn</h2>
+  <p>Predict the result <em>before</em> each experiment, then check the trace/eval to see if you were right.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Experiment</th><th>Where</th><th>What you'll learn</th></tr>
+    <tr><td>Ask "how do I wash it?" in TF-IDF vs Embeddings mode</td><td>sidebar</td><td>Words vs meaning — the single best demo in the project.</td></tr>
+    <tr><td>Ask an off-topic question with the agentic loop ON, read the trace</td><td>chat</td><td>Grade → synonym retry → honest refusal. Agentic RAG in one expander.</td></tr>
+    <tr><td>Ask a question, then a vague follow-up ("and that?")</td><td>chat</td><td>Watch the rewrite step turn mush into a searchable query.</td></tr>
+    <tr><td>Toggle the reranker OFF, re-run <code>eval_retrieval.py --mode hybrid</code> vs <code>--mode rerank</code></td><td>terminal</td><td>Compare which config puts the right page at #1 — precision, measured.</td></tr>
+    <tr><td>Turn HyDE ON and retry the "wash" question in TF-IDF mode</td><td>sidebar</td><td>The fake answer often contains "rinse"-style words — HyDE can rescue even word-matching.</td></tr>
+    <tr><td>Slide k to 1, ask a multi-part question</td><td>sidebar</td><td>One excerpt = narrow answers. Breadth matters.</td></tr>
+    <tr><td>Delete the "ONLY those excerpts" rule, ask about colors</td><td>SYSTEM_PROMPT in <span class="filechip">chatbot.py</span></td><td>Un-grounding — and watch the self-check start flagging the answers.</td></tr>
+    <tr><td><code>python eval_answers.py --n 3</code> before/after any change</td><td>terminal</td><td>Answer quality as a number, not a feeling.</td></tr>
+  </table></div>
+</section>
+
+<section id="quiz">
+  <h2><span class="secnum">16</span>Check yourself</h2>
+  <details><summary>Why do we search small child chunks but give the model big parent sections?</summary>
+    <p>Small pieces make similarity scores meaningful (sharp matching); big pieces give the model enough
+    surrounding context to answer well. Small-to-big uses each size for what it's good at.</p></details>
+  <details><summary>Why does "wash" find "rinse" in embeddings mode but not TF-IDF mode?</summary>
+    <p>TF-IDF has one slot per exact word — "wash" and "rinse" are different slots, overlap zero.
+    The embedding model learned from billions of sentences that they appear in the same contexts,
+    so it places them close together in meaning space.</p></details>
+  <details><summary>Why does RRF fuse RANKS instead of raw scores?</summary>
+    <p>TF-IDF scores and cosine scores live on different scales — adding them directly would let one
+    list bully the other. Positions (1st, 2nd, 3rd...) are scale-free, so each list gets an equal vote.</p></details>
+  <details><summary>Why is the cross-encoder more accurate than the embedding search — and why not use it for everything?</summary>
+    <p>It reads question + chunk together, so it can spot the actual connection instead of comparing
+    two separately-made summaries. But it must run once per pair, which is far too slow for thousands
+    of chunks — so we retrieve ~16 cheaply first, then rerank only those.</p></details>
+    <details><summary>What does the "grade" step change compared to classic RAG?</summary>
+    <p>Classic RAG always answers from whatever was retrieved, good or bad. The grade step adds
+    judgment: weak evidence triggers a retry with synonym queries before answering — the pipeline
+    becomes a loop with decisions (agentic RAG).</p></details>
+  <details><summary>Why does searching with a FAKE answer (HyDE) work?</summary>
+    <p>Chunks are answer-shaped; questions aren't. A model-written fake answer uses the same style and
+    vocabulary as real document text, so it lands closer to the right chunks in meaning space.</p></details>
+  <details><summary>What can the groundedness self-check catch — and what can it never catch?</summary>
+    <p>It catches claims not supported by the retrieved excerpts (fabrications, wrong numbers). It can
+    NOT catch what retrieval never found — if the right page wasn't retrieved, the checker has no way
+    to know it exists. Retrieval quality still comes first.</p></details>
+  <details><summary>The model answered a follow-up correctly. How, if the API is stateless?</summary>
+    <p>The code re-sends the recent conversation (last 6 Q&amp;A pairs) with every request. The memory
+    lives in your Python program, not in the model.</p></details>
+  <details><summary>Where exactly does text-writing AI run in this project?</summary>
+    <p>Only in the Groq calls: rewrite, grade, expansion, HyDE (if on), the answer, and the self-check.
+    The embedder, reranker, and OCR are neural networks too — but they run locally and only convert or
+    score; they never write a word. Everything else is deterministic Python.</p></details>
+</section>
+
+<footer>
+  <p><strong>Where this leads (project 4 ideas):</strong> GraphRAG for whole-document questions ·
+  LLM-written contextual headers · multimodal RAG (embedding figures and diagrams) · deploying the app
+  to the web with per-user sessions.</p>
+  <p>Guide for <span class="filechip">PROJ-K\Personal-PDF-Chatbot</span> v3 — pipeline: pypdf/pdfplumber/OCR →
+  parent-child chunks with contextual headers → TF-IDF + MiniLM embeddings (ChromaDB) → RRF fusion →
+  cross-encoder rerank → CRAG grade/retry → Groq Llama 3.3 (fallback) → groundedness self-check.
+  Measured: hybrid+rerank 8/8 hits, 8/8 at rank #1; judge faithfulness 5.0/5.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var stop = new Set(["the","a","an","is","are","was","to","of","and","in","on","it","i","how","what","do","does","with","for","under","about","my","your"]);
+  function tokens(s){
+    return s.toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(function(w){return w && !stop.has(w);});
+  }
+  var docs = [
+    tokens("The X100 comes with a twelve month limited warranty covering manufacturing defects"),
+    tokens("To clean the filter remove the dust container and rinse the filter under cold water"),
+    tokens("The battery provides 45 minutes of runtime and recharges fully in about four hours")
+  ];
+  function idf(word){
+    var n = docs.reduce(function(c,d){return c + (d.indexOf(word)>=0 ? 1:0);},0);
+    return n===0 ? 0 : Math.log(1 + docs.length/n);
+  }
+  var input = document.getElementById("q");
+  var verdict = document.getElementById("verdict");
+  function update(){
+    var q = tokens(input.value);
+    var raw = docs.map(function(d){
+      var s = 0;
+      q.forEach(function(w){ if(d.indexOf(w)>=0) s += idf(w); });
+      return s;
+    });
+    var max = Math.max.apply(null, raw.concat([0.0001]));
+    var bestIdx = raw.indexOf(Math.max.apply(null, raw));
+    for(var i=0;i<3;i++){
+      var el = document.getElementById("d"+i);
+      var pct = raw[i]<=0 ? 0 : Math.round(100*raw[i]/max);
+      el.querySelector(".fill").style.width = pct+"%";
+      el.querySelector(".score").textContent = pct+"%";
+      el.classList.toggle("best", raw[i]>0 && i===bestIdx);
+    }
+    if(!input.value.trim()){ verdict.textContent = "Type a question to score the chunks."; }
+    else if(raw[bestIdx]<=0){
+      verdict.textContent = "No chunk shares any meaningful word with your question - TF-IDF returns nothing. (Embeddings, hybrid mode, HyDE, and the CRAG retry all exist to fix exactly this.)";
+    } else {
+      var names = ["page 1 (warranty)","page 2 (cleaning)","page 3 (battery)"];
+      verdict.textContent = "Winner: " + names[bestIdx] + " - this excerpt would be sent to the model.";
+    }
+  }
+  input.addEventListener("input", update);
+  update();
+})();
+</script>
+
+</html>

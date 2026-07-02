@@ -1,0 +1,9 @@
+groq>=0.11
+streamlit>=1.38
+pypdf>=4.0
+scikit-learn>=1.4
+sentence-transformers>=3.0
+chromadb>=0.5
+pdfplumber>=0.11
+pypdfium2>=4.0
+rapidocr-onnxruntime>=1.3
